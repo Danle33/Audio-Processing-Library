@@ -1,5 +1,6 @@
 #include "../include/lib/io/AudioIO.hpp"
 
+#include <cstring>
 #include <fstream>
 
 
@@ -21,10 +22,10 @@ bool lib::io::read(const std::string& path, lib::core::AudioContainer& container
     }
 
     file.close();
-    return decodeWav(buffer, container);
+    return wav::decodeWav(buffer, container);
 }
 
-bool lib::io::decodeWav(std::vector<uint8_t>& buffer, lib::core::AudioContainer& container) {
+bool lib::io::wav::decodeWav(std::vector<uint8_t>& buffer, lib::core::AudioContainer& container) {
 #pragma pack(push, 1)
     struct WavHeader {
         char riff[4];            // "RIFF"
@@ -164,3 +165,74 @@ bool lib::io::decodeWav(std::vector<uint8_t>& buffer, lib::core::AudioContainer&
 
     return true;
 }
+
+bool lib::io::wav::decodeWav(std::vector<char>& buffer, lib::core::AudioContainer& container) {
+    char riff[4];
+    std::memcpy(riff, buffer.data(), 4);
+    if (strcmp(riff, "RIFF") != 0) return false;
+
+    uint32_t totalFileSize;
+    std::memcpy(&totalFileSize, buffer.data() + 4, 4);
+    if (static_cast<int32_t>(totalFileSize) - 8 <= 0) return false;
+    totalFileSize -= 8;
+
+    char wave[4];
+    std::memcpy(wave, buffer.data() + 8, 4);
+    if (strcmp(wave, "WAVE") != 0) return false;
+
+    uint32_t cursor = 12;
+    bool fmtFound = false;
+    bool dataFound = false;
+
+    FmtPayload fmtPayload{};
+    uint32_t dataPayloadCursor{};
+    uint32_t dataPayloadSize{};
+
+    while (cursor < totalFileSize) {
+        char chunkID[4];
+        std::memcpy(chunkID, buffer.data() + cursor, 4);
+
+        uint32_t chunkSize;
+        std::memcpy(&chunkSize, buffer.data() + cursor + 4, 4);
+
+        if (strcmp(chunkID, "fmt ") == 0) {
+            if (fmtFound) return false;
+            fmtFound = true;
+
+            uint32_t fmtPayloadCursor = cursor + 8;
+
+            std::memcpy(&fmtPayload, buffer.data() + fmtPayloadCursor, 16);
+
+            if (fmtPayload.audioFormat == 65534) {
+                std::memcpy(&fmtPayload.audioFormat, buffer.data() + fmtPayloadCursor + 24, 2);
+            }
+        }
+        else if (strcmp(chunkID, "data") == 0) {
+            if (dataFound) return false;
+            dataFound = true;
+
+            dataPayloadCursor = cursor + 8;
+            dataPayloadSize = chunkSize;
+
+            if (dataPayloadCursor + dataPayloadSize > totalFileSize) return false;
+        }
+
+        if (fmtFound && dataFound) {
+            break;
+        }
+
+        cursor += (chunkSize + (chunkSize % 2));
+    }
+
+    makeChannels(fmtPayload, dataPayloadCursor, dataPayloadSize, container);
+    return true;
+}
+
+void lib::io::wav::makeChannels(const FmtPayload& fmtPayload, uint32_t dataPayloadCursor, const uint32_t dataPayloadSize,
+            lib::core::AudioContainer& container) {
+
+    container.channels_.resize(fmtPayload.numChannels);
+
+
+}
+
