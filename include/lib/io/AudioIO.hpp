@@ -22,7 +22,7 @@ namespace lib::io::wav {
         };
 #pragma pack(pop)
 
-        bool decodeWav(std::vector<char>& buffer, lib::core::AudioContainer& container);
-        void makeChannels(const FmtPayload& fmtPayload, uint32_t dataPayloadCursor, uint32_t dataPayloadSize,
+        bool decodeWav(const std::vector<uint8_t>& buffer, lib::core::AudioContainer& container);
+        bool populateChannels(const std::vector<uint8_t>& buffer, const FmtPayload& fmtPayload, uint32_t dataPayloadCursor, uint32_t dataPayloadSize,
                         lib::core::AudioContainer& container);
 }

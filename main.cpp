@@ -6,7 +6,7 @@
 #include "include/lib/io/AudioIO.hpp"
 
 int main() {
-    auto myContainer = lib::core::AudioContainer();
+    lib::core::AudioContainer myContainer;
 
     if (!lib::io::read("input.wav", myContainer)) {
         std::cerr << "Failed to read input file.\n";

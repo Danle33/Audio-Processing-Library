@@ -6,7 +6,5 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(AudioLib main.cpp
         include/lib/core/AudioChannel.hpp
         include/lib/core/AudioContainer.hpp
-        include/lib/io/AudioFileHandler.hpp
-        src/AudioFileHandler.cpp
-        include/lib/io/AudioDecoder.hpp
-        src/AudioDecoder.cpp)
+        include/lib/io/AudioIO.hpp
+        src/AudioIO.cpp)
