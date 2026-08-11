@@ -7,4 +7,5 @@ add_executable(AudioLib main.cpp
         include/lib/core/AudioChannel.hpp
         include/lib/core/AudioContainer.hpp
         include/lib/io/AudioIO.hpp
-        src/AudioIO.cpp)
+        src/AudioIO.cpp
+        include/lib/dsp/AudioDSP.hpp)

@@ -3,12 +3,14 @@
 #include <cstring>
 #include <fstream>
 
+#include "../include/lib/dsp/AudioDSP.hpp"
 
-bool lib::io::read(const std::string& path, lib::core::AudioContainer& container) {
+
+std::optional<std::string> lib::io::read(const std::string& path, lib::core::AudioContainer& container) {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
 
     if (!file.is_open()) {
-        return false;
+        return "Error while opening a file.";
     }
 
     const std::streamsize fileSize = file.tellg();
@@ -16,32 +18,55 @@ bool lib::io::read(const std::string& path, lib::core::AudioContainer& container
 
     std::vector<uint8_t> buffer(fileSize);
 
-    // 4. Read bytes directly into buffer vector memory
     if (!file.read(reinterpret_cast<char*>(buffer.data()), fileSize)) {
-        return false;
+        return "Error while parsing file data.";
     }
 
     file.close();
-    return wav::decodeWav(buffer, container);
+    return wav::decode(buffer, container);
 }
 
-bool lib::io::wav::decodeWav(const std::vector<uint8_t>& buffer, lib::core::AudioContainer& container) {
-    if (buffer.size() < 12) return false;
+std::optional<std::string> lib::io::write(const std::string& path, lib::core::AudioContainer& container,
+                                        const wav::encodingFormat& encodingFormat) {
+    std::vector<uint8_t> buffer;
+    auto status = wav::encode(buffer, container, encodingFormat);
+    if (status.has_value()) {
+        return status.value();
+    }
+
+    std::ofstream file(path, std::ios::binary);
+
+    if (!file.is_open()) {
+        return "Error while opening a file.";
+    }
+
+    const auto fileSize = static_cast<std::streamsize>(buffer.size());
+
+    if (!file.write(reinterpret_cast<char*>(buffer.data()), fileSize)) {
+        return "Error while writing into a file.";
+    }
+
+    file.close();
+    return std::nullopt;
+}
+
+std::optional<std::string> lib::io::wav::decode(const std::vector<uint8_t>& buffer, lib::core::AudioContainer& container) {
+    if (buffer.size() < 12) return "Error! File size is less than 12 bytes.";
 
     char riff[4];
     std::memcpy(riff, buffer.data(), 4);
-    if (memcmp(riff, "RIFF", 4) != 0) return false;
+    if (memcmp(riff, "RIFF", 4) != 0) return "Error! RIFF chunk is missing.";
 
     uint32_t totalFileSize;
     std::memcpy(&totalFileSize, buffer.data() + 4, 4);
-    if (static_cast<int32_t>(totalFileSize) - 8 <= 0) return false;
+    if (static_cast<int32_t>(totalFileSize) + 8 <= 0) return "Error! File size field holds a negative value.";
     totalFileSize += 8;
 
     const uint32_t maxBoundary = std::min<size_t>(buffer.size(), totalFileSize);
 
     char wave[4];
     std::memcpy(wave, buffer.data() + 8, 4);
-    if (memcmp(wave, "WAVE", 4) != 0) return false;
+    if (memcmp(wave, "WAVE", 4) != 0) return "Error! WAVE chunk is missing.";
 
     uint32_t cursor = 12;
     bool fmtFound = false;
@@ -52,7 +77,7 @@ bool lib::io::wav::decodeWav(const std::vector<uint8_t>& buffer, lib::core::Audi
     uint32_t dataPayloadSize{};
 
     while (cursor < totalFileSize) {
-        if (cursor + 8 > maxBoundary) return false;
+        if (cursor + 8 > maxBoundary) return "Error! Cursor exceeded file size.";
 
         char chunkID[4];
         std::memcpy(chunkID, buffer.data() + cursor, 4);
@@ -61,27 +86,29 @@ bool lib::io::wav::decodeWav(const std::vector<uint8_t>& buffer, lib::core::Audi
         std::memcpy(&chunkSize, buffer.data() + cursor + 4, 4);
 
         if (std::memcmp(chunkID, "fmt ", 4) == 0) {
-            if (fmtFound) return false;
+            if (fmtFound) return "Error! Multiple fmt chunks found.";
             fmtFound = true;
 
             uint32_t fmtPayloadCursor = cursor + 8;
 
-            if (chunkSize < 16 || fmtPayloadCursor + 16 > maxBoundary) return false;
+            if (chunkSize < 16) return "Error! fmt chunk size is less than 16 bytes.";
+
+            if (fmtPayloadCursor + 16 > maxBoundary) return "Error! Cursor exceeded file size.";
             std::memcpy(&fmtPayload, buffer.data() + fmtPayloadCursor, 16);
 
             if (fmtPayload.audioFormat == 65534 && chunkSize >= 40) {
-                if (fmtPayloadCursor + 26 > maxBoundary) return false;
+                if (fmtPayloadCursor + 26 > maxBoundary) return "Error! Cursor exceeded file size.";
                 std::memcpy(&fmtPayload.audioFormat, buffer.data() + fmtPayloadCursor + 24, 2);
             }
         }
         else if (std::memcmp(chunkID, "data", 4) == 0) {
-            if (dataFound) return false;
+            if (dataFound) return "Error! Multiple data chunks found.";
             dataFound = true;
 
             dataPayloadCursor = cursor + 8;
             dataPayloadSize = chunkSize;
 
-            if (dataPayloadCursor + dataPayloadSize > maxBoundary) return false;
+            if (dataPayloadCursor + dataPayloadSize > maxBoundary) return "Error! Cursor exceeded file size.";
         }
 
         if (fmtFound && dataFound) {
@@ -95,22 +122,22 @@ bool lib::io::wav::decodeWav(const std::vector<uint8_t>& buffer, lib::core::Audi
         cursor = static_cast<uint32_t>(nextCursor);
     }
 
-    if (!fmtFound || !dataFound) return false;
+    if (!fmtFound || !dataFound) return "Error! File must contain both fmt and data chunks.";
 
     return populateChannels(buffer, fmtPayload, dataPayloadCursor, dataPayloadSize, container);
 }
 
-bool lib::io::wav::populateChannels(const std::vector<uint8_t>& buffer, const FmtPayload& fmtPayload, uint32_t dataPayloadCursor, const uint32_t dataPayloadSize,
+std::optional<std::string> lib::io::wav::populateChannels(const std::vector<uint8_t>& buffer, const FmtPayload& fmtPayload, uint32_t dataPayloadCursor, const uint32_t dataPayloadSize,
             lib::core::AudioContainer& container) {
 
-    if (fmtPayload.numChannels != 1 && fmtPayload.numChannels != 2) return false;
+    if (fmtPayload.numChannels != 1 && fmtPayload.numChannels != 2) return "Error! Decoded number of channels is invalid.";
 
     container.channels_.resize(fmtPayload.numChannels);
 
     const uint16_t bytesPerSample = fmtPayload.bitsPerSample / 8;
     const uint16_t frameSizeBytes = fmtPayload.numChannels * bytesPerSample;
 
-    if (frameSizeBytes == 0) return false;
+    if (frameSizeBytes == 0) return "Error! Frame size is 0 bytes.";
 
     const uint32_t frameCount = dataPayloadSize / frameSizeBytes;
 
@@ -229,6 +256,79 @@ bool lib::io::wav::populateChannels(const std::vector<uint8_t>& buffer, const Fm
             }
         }
     }
-    return true;
+    return std::nullopt;
+}
+
+std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, lib::core::AudioContainer& container,
+                            const encodingFormat& encodingFormat) {
+
+    // validation
+    if (encodingFormat.sampleRateHz != container.sampleRate_) {
+        // TODO: resample(newSampleRate, container);
+        return "Requested sample rate must be the same as input one.";
+    }
+    if (encodingFormat.bitDepth != 16 && encodingFormat.bitDepth != 24 && encodingFormat.bitDepth != 32)
+        return "Invalid bit depth. Available: 16, 24, 32.";
+
+    if (encodingFormat.numChannels == 2 && container.numChannels_ == 1) return "Cannot encode mono buffer into a stereo one";
+
+    if (encodingFormat.numChannels == 1 && container.numChannels_ == 2) {
+        auto status = lib::dsp::stereoToMono(container);
+        if (status.has_value()) return status.value();
+    }
+
+    if (encodingFormat.numChannels != 1 && encodingFormat.numChannels != 2) return "Invalid number of channels.";
+
+    uint8_t* bufferPtr = buffer.data();
+    buffer.reserve(44);
+
+    std::memcpy(bufferPtr, "RIFF", 4);
+    bufferPtr += 4;
+
+    const uint32_t frameCount = container.channels_[0].data_.size();
+    const uint16_t blockAlign = encodingFormat.numChannels * (encodingFormat.bitDepth / 8);
+    const uint32_t subchunk2Size = frameCount * blockAlign;
+
+    const uint32_t chunkSize = subchunk2Size + 36;
+    std::memcpy(bufferPtr, &chunkSize, 4);
+    bufferPtr += 4;
+
+    std::memcpy(bufferPtr, "WAVE", 4);
+    bufferPtr += 4;
+
+    std::memcpy(bufferPtr, "fmt ", 4);
+    bufferPtr += 4;
+
+    const uint32_t subchunk1Size = 16;
+    std::memcpy(bufferPtr, &subchunk1Size, 4);
+    bufferPtr += 4;
+
+    const uint16_t audioFormat = 1;
+    std::memcpy(bufferPtr, &audioFormat, 2);
+    bufferPtr += 2;
+
+    std::memcpy(bufferPtr, &encodingFormat.numChannels, 2);
+    bufferPtr += 2;
+
+    std::memcpy(bufferPtr, &encodingFormat.sampleRateHz, 4);
+    bufferPtr += 4;
+
+    std::memcpy(bufferPtr, &blockAlign, 2);
+    bufferPtr += 2;
+
+    std::memcpy(bufferPtr, &encodingFormat.bitDepth, 2);
+    bufferPtr += 2;
+
+    std::memcpy(bufferPtr, "data", 4);
+    bufferPtr += 4;
+
+    std::memcpy(bufferPtr, &subchunk2Size, 4);
+    bufferPtr += 4;
+
+    if (bufferPtr - buffer.data() != 44) return "Error! Buffer pointer offset is not 44 bytes after header encoding.";
+
+
+
+    return std::nullopt;
 }
 
