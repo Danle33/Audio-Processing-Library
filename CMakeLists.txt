@@ -8,4 +8,7 @@ add_executable(AudioLib main.cpp
         include/lib/core/AudioContainer.hpp
         include/lib/io/AudioIO.hpp
         src/AudioIO.cpp
-        include/lib/dsp/AudioDSP.hpp)
+        include/lib/dsp/AudioDSP.hpp
+        src/AudioWav.cpp
+        src/AudioDSP.cpp
+        include/lib/io/AudioWAV.hpp)

@@ -8,17 +8,16 @@
 int main() {
     lib::core::AudioContainer myContainer;
 
-    if (!lib::io::read("input.wav", myContainer)) {
-        std::cerr << "Failed to read input file.\n";
-        return 0;
-    }
+    lib::io::read("input.wav", myContainer);
 
     // DSP processing...
 
-    if (!lib::io::write("output.wav", myContainer)) {
-        std::cerr << "Failed to write output file.\n";
-        return 0;
-    }
+    lib::io::write("output.wav", myContainer,
+                    lib::io::wav::encodingFormat {
+                        .sampleRateHz = 44100,
+                        .bitDepth = 24,
+                        .numChannels = 2
+                    });
 
     return 0;
 }

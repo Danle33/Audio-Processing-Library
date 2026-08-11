@@ -8,8 +8,6 @@ namespace lib::core {
     class AudioChannel {
     public:
         std::vector<float> data_;
-        explicit AudioChannel();
-
     };
 
 }

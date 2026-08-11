@@ -13,8 +13,6 @@ namespace lib::core {
         std::vector<AudioChannel> channels_;
         uint32_t sampleRate_;
 
-        explicit AudioContainer();
-
     };
 
 }
