@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <cstring>
 
 #include "../include/lib/io/AudioIO.hpp"
@@ -198,13 +201,17 @@ std::optional<std::string> lib::io::wav::populateChannels(const std::vector<uint
 std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, lib::core::AudioContainer& container,
                             const encodingFormat& encodingFormat) {
 
+    if (container.channels_.empty() || container.channels_[0].data_.empty()) {
+        return "Audio container contains no channel or frame data.";
+    }
+
     // validation
     if (encodingFormat.sampleRateHz != container.sampleRate_) {
         // TODO: resample(newSampleRate, container);
         return "Requested sample rate must be the same as input one.";
     }
-    if (encodingFormat.bitDepth != 8 && encodingFormat.bitDepth != 16 && encodingFormat.bitDepth != 24)
-        return "Invalid bit depth. Available: 8, 16, 24.";
+    if (encodingFormat.bitDepth != 8 && encodingFormat.bitDepth != 16 && encodingFormat.bitDepth != 24 && encodingFormat.bitDepth != 32)
+        return "Invalid bit depth. Available: 8, 16, 24, 32.";
 
     if (encodingFormat.numChannels == 2 && container.numChannels_ == 1) return "Cannot encode mono buffer into a stereo one";
 
@@ -218,11 +225,12 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
     const uint32_t frameCount = container.channels_[0].data_.size();
     const uint16_t blockAlign = encodingFormat.numChannels * (encodingFormat.bitDepth / 8);
     const uint32_t subchunk2Size = frameCount * blockAlign;
-
-    uint8_t* bufferPtr = buffer.data();
+    const uint32_t byteRate = blockAlign * encodingFormat.sampleRateHz;
 
     const uint32_t bufferSize = 44 + encodingFormat.numChannels * (encodingFormat.bitDepth / 8) * frameCount;
-    buffer.reserve(bufferSize);
+    buffer.resize(bufferSize);
+
+    uint8_t* bufferPtr = buffer.data();
 
     std::memcpy(bufferPtr, "RIFF", 4);
     bufferPtr += 4;
@@ -241,7 +249,7 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
     std::memcpy(bufferPtr, &subchunk1Size, 4);
     bufferPtr += 4;
 
-    const uint16_t audioFormat = 1;
+    const uint16_t audioFormat = (encodingFormat.bitDepth == 32) ? 3 : 1;
     std::memcpy(bufferPtr, &audioFormat, 2);
     bufferPtr += 2;
 
@@ -249,6 +257,9 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
     bufferPtr += 2;
 
     std::memcpy(bufferPtr, &encodingFormat.sampleRateHz, 4);
+    bufferPtr += 4;
+
+    std::memcpy(bufferPtr, &byteRate, 4);
     bufferPtr += 4;
 
     std::memcpy(bufferPtr, &blockAlign, 2);
@@ -271,16 +282,18 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
         if (encodingFormat.bitDepth == 8) {
             for (size_t i = 0; i < frameCount; ++i) {
                 const float normalizedVal = container.channels_[0].data_[i];
-                buffer[dataPayloadIdx++] = normalizedVal * normalizingFactor + normalizingFactor;
+                const float clampedVal = std::clamp(normalizedVal, -1.0f, 1.0f);
+                buffer[dataPayloadIdx++] = std::round(clampedVal * (normalizingFactor - 0.5f) + (normalizingFactor - 0.5f));
             }
         }
         else if (encodingFormat.bitDepth == 16) {
             for (size_t i = 0; i < frameCount; ++i) {
                 const float normalizedVal = container.channels_[0].data_[i];
-                const auto desiredVal = static_cast<int16_t>(normalizedVal * normalizingFactor);
+                const float clampedVal = std::clamp(normalizedVal, -1.0f, 1.0f);
+                const auto desiredVal = static_cast<int16_t>(std::round(clampedVal * (normalizingFactor - 1.0f)));
 
-                buffer[dataPayloadIdx + i] = static_cast<uint8_t>(desiredVal);
-                buffer[dataPayloadIdx + i + 1] = static_cast<uint8_t>(desiredVal >> 8);
+                buffer[dataPayloadIdx] = static_cast<uint8_t>(desiredVal);
+                buffer[dataPayloadIdx + 1] = static_cast<uint8_t>(desiredVal >> 8);
 
                 dataPayloadIdx += 2;
             }
@@ -288,13 +301,29 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
         else if (encodingFormat.bitDepth == 24) {
             for (size_t i = 0; i < frameCount; ++i) {
                 const float normalizedVal = container.channels_[0].data_[i];
-                const auto desiredVal = static_cast<int32_t>(normalizedVal * normalizingFactor);
+                const float clampedVal = std::clamp(normalizedVal, -1.0f, 1.0f);
+                const auto desiredVal = static_cast<int32_t>(std::round(clampedVal * (normalizingFactor - 1.0f)));
 
-                buffer[dataPayloadIdx + i] = static_cast<uint8_t>(desiredVal);
-                buffer[dataPayloadIdx + i + 1] = static_cast<uint8_t>(desiredVal >> 8);
-                buffer[dataPayloadIdx + i + 2] = static_cast<uint8_t>(desiredVal >> 16);
+                buffer[dataPayloadIdx] = static_cast<uint8_t>(desiredVal);
+                buffer[dataPayloadIdx + 1] = static_cast<uint8_t>(desiredVal >> 8);
+                buffer[dataPayloadIdx + 2] = static_cast<uint8_t>(desiredVal >> 16);
 
                 dataPayloadIdx += 3;
+            }
+        }
+        else if (encodingFormat.bitDepth == 32) {
+            for (size_t i = 0; i < frameCount; ++i) {
+                const float normalizedVal = container.channels_[0].data_[i];
+                const float clampedVal = std::clamp(normalizedVal, -1.0f, 1.0f);
+                int32_t desiredVal;
+                std::memcpy(&desiredVal, &clampedVal, 4);
+
+                buffer[dataPayloadIdx] = static_cast<uint8_t>(desiredVal);
+                buffer[dataPayloadIdx + 1] = static_cast<uint8_t>(desiredVal >> 8);
+                buffer[dataPayloadIdx + 2] = static_cast<uint8_t>(desiredVal >> 16);
+                buffer[dataPayloadIdx + 3] = static_cast<uint8_t>(desiredVal >> 24);
+
+                dataPayloadIdx += 4;
             }
         }
     }
@@ -303,24 +332,28 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
         if (encodingFormat.bitDepth == 8) {
             for (size_t i = 0; i < frameCount; ++i) {
                 const float normalizedValLeft = container.channels_[0].data_[i];
+                const float clampedValLeft = std::clamp(normalizedValLeft, -1.0f, 1.0f);
                 const float normalizedValRight = container.channels_[1].data_[i];
+                const float clampedValRight = std::clamp(normalizedValRight, -1.0f, 1.0f);
 
-                buffer[dataPayloadIdx++] = normalizedValLeft * normalizingFactor + normalizingFactor;
-                buffer[dataPayloadIdx++] = normalizedValRight * normalizingFactor + normalizingFactor;
+                buffer[dataPayloadIdx++] = std::round(clampedValLeft * (normalizingFactor - 0.5f) + (normalizingFactor - 0.5f));
+                buffer[dataPayloadIdx++] = std::round(clampedValRight * (normalizingFactor - 0.5f) + (normalizingFactor - 0.5f));
             }
         }
         else if (encodingFormat.bitDepth == 16) {
             for (size_t i = 0; i < frameCount; ++i) {
                 const float normalizedValLeft = container.channels_[0].data_[i];
+                const float clampedValLeft = std::clamp(normalizedValLeft, -1.0f, 1.0f);
                 const float normalizedValRight = container.channels_[1].data_[i];
+                const float clampedValRight = std::clamp(normalizedValRight, -1.0f, 1.0f);
 
-                const auto desiredValLeft = static_cast<int16_t>(normalizedValLeft * normalizingFactor);
-                const auto desiredValRight = static_cast<int16_t>(normalizedValRight * normalizingFactor);
+                const auto desiredValLeft = static_cast<int16_t>(std::round(clampedValLeft * (normalizingFactor - 1.0f)));
+                const auto desiredValRight = static_cast<int16_t>(std::round(clampedValRight * (normalizingFactor - 1.0f)));
 
-                buffer[dataPayloadIdx + i] = static_cast<uint8_t>(desiredValLeft);
-                buffer[dataPayloadIdx + i + 1] = static_cast<uint8_t>(desiredValLeft >> 8);
-                buffer[dataPayloadIdx + i + 2] = static_cast<uint8_t>(desiredValRight);
-                buffer[dataPayloadIdx + i + 3] = static_cast<uint8_t>(desiredValRight >> 8);
+                buffer[dataPayloadIdx] = static_cast<uint8_t>(desiredValLeft);
+                buffer[dataPayloadIdx + 1] = static_cast<uint8_t>(desiredValLeft >> 8);
+                buffer[dataPayloadIdx + 2] = static_cast<uint8_t>(desiredValRight);
+                buffer[dataPayloadIdx + 3] = static_cast<uint8_t>(desiredValRight >> 8);
 
                 dataPayloadIdx += 4;
             }
@@ -328,23 +361,50 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
         else if (encodingFormat.bitDepth == 24) {
             for (size_t i = 0; i < frameCount; ++i) {
                 const float normalizedValLeft = container.channels_[0].data_[i];
+                const float clampedValLeft = std::clamp(normalizedValLeft, -1.0f, 1.0f);
                 const float normalizedValRight = container.channels_[1].data_[i];
+                const float clampedValRight = std::clamp(normalizedValRight, -1.0f, 1.0f);
 
-                const auto desiredValLeft = static_cast<int32_t>(normalizedValLeft * normalizingFactor);
-                const auto desiredValRight = static_cast<int32_t>(normalizedValRight * normalizingFactor);
+                const auto desiredValLeft = static_cast<int32_t>(std::round(clampedValLeft * (normalizingFactor - 1.0f)));
+                const auto desiredValRight = static_cast<int32_t>(std::round(clampedValRight * (normalizingFactor - 1.0f)));
 
-                buffer[dataPayloadIdx + i] = static_cast<uint8_t>(desiredValLeft);
-                buffer[dataPayloadIdx + i + 1] = static_cast<uint8_t>(desiredValLeft >> 8);
-                buffer[dataPayloadIdx + i + 2] = static_cast<uint8_t>(desiredValLeft >> 16);
-                buffer[dataPayloadIdx + i + 3] = static_cast<uint8_t>(desiredValRight);
-                buffer[dataPayloadIdx + i + 4] = static_cast<uint8_t>(desiredValRight >> 8);
-                buffer[dataPayloadIdx + i + 5] = static_cast<uint8_t>(desiredValRight >> 16);
+                buffer[dataPayloadIdx] = static_cast<uint8_t>(desiredValLeft);
+                buffer[dataPayloadIdx + 1] = static_cast<uint8_t>(desiredValLeft >> 8);
+                buffer[dataPayloadIdx + 2] = static_cast<uint8_t>(desiredValLeft >> 16);
+                buffer[dataPayloadIdx + 3] = static_cast<uint8_t>(desiredValRight);
+                buffer[dataPayloadIdx + 4] = static_cast<uint8_t>(desiredValRight >> 8);
+                buffer[dataPayloadIdx + 5] = static_cast<uint8_t>(desiredValRight >> 16);
 
                 dataPayloadIdx += 6;
             }
         }
+        else if (encodingFormat.bitDepth == 32) {
+            for (size_t i = 0; i < frameCount; ++i) {
+                const float normalizedValLeft = container.channels_[0].data_[i];
+                const float clampedValLeft = std::clamp(normalizedValLeft, -1.0f, 1.0f);
+                const float normalizedValRight = container.channels_[1].data_[i];
+                const float clampedValRight = std::clamp(normalizedValRight, -1.0f, 1.0f);
+
+                uint32_t desiredValLeft;
+                std::memcpy(&desiredValLeft, &clampedValLeft, 4);
+
+                uint32_t desiredValRight;
+                std::memcpy(&desiredValRight, &clampedValRight, 4);
+
+                buffer[dataPayloadIdx] = static_cast<uint8_t>(desiredValLeft);
+                buffer[dataPayloadIdx + 1] = static_cast<uint8_t>(desiredValLeft >> 8);
+                buffer[dataPayloadIdx + 2] = static_cast<uint8_t>(desiredValLeft >> 16);
+                buffer[dataPayloadIdx + 3] = static_cast<uint8_t>(desiredValLeft >> 24);
+
+                buffer[dataPayloadIdx + 4] = static_cast<uint8_t>(desiredValRight);
+                buffer[dataPayloadIdx + 5] = static_cast<uint8_t>(desiredValRight >> 8);
+                buffer[dataPayloadIdx + 6] = static_cast<uint8_t>(desiredValRight >> 16);
+                buffer[dataPayloadIdx + 7] = static_cast<uint8_t>(desiredValRight >> 24);
+
+                dataPayloadIdx += 8;
+            }
+        }
     }
 
-    buffer.resize(bufferSize);
     return std::nullopt;
 }
