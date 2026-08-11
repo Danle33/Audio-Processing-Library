@@ -11,4 +11,6 @@ add_executable(AudioLib main.cpp
         include/lib/dsp/AudioDSP.hpp
         src/AudioWav.cpp
         src/AudioDSP.cpp
-        include/lib/io/AudioWAV.hpp)
+        include/lib/io/AudioWAV.hpp
+        include/lib/dsp/AudioEQ.hpp
+        src/AudioEQ.cpp)
