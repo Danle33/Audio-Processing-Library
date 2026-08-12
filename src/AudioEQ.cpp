@@ -1,33 +1,43 @@
 #include "../include/lib/dsp/AudioEQ.hpp"
 
-std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioContainer, const float targetFreq, const uint8_t steepness, const float Q) {
+#include <cmath>
+
+std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioContainer, const float cutoffFreq, const uint8_t steepness, float Q,
+                                                FilterType filterType) {
+
     if (audioContainer.channels_.empty() || audioContainer.channels_[0].data_.empty())
         return "Error! Audio container is empty.";
 
-    if (targetFreq < 20.0f || targetFreq > 20000.0f) return "Target frequency should be between 20Hz and 20000Hz.";
+    if (cutoffFreq < 20.0f || cutoffFreq > 20000.0f) return "Target frequency should be in range between 20Hz and 20000Hz.";
 
-    if (steepness % 12 != 0 || steepness > 48)
+    if (steepness % 12 != 0 || steepness > 48 || steepness == 0)
         return "Invalid steepness value. Available: 12, 24, 36, 48.";
 
-    if (Q < 0.0f || Q > 1.0f)
-        return "Invalid Q value. Available range is [0, 1].";
+    if (Q < 0.025f || Q > 40.0f)
+        return "Invalid Q value. Available range is [0.025, 40].";
 
+    Q = Q / std::sqrt(2.0f);
     uint8_t S = steepness / 12;
+    const auto fs = audioContainer.sampleRate_;
 
-    return std::nullopt;
-}
+    if (cutoffFreq >= fs / 2.0f) return "Error! Cutoff Frequency is too high.";
 
-std::optional<std::string> lib::dsp::eq::highCut(core::AudioContainer& audioContainer, const float targetFreq, const uint8_t steepness, const float Q) {
-    if (audioContainer.channels_.empty() || audioContainer.channels_[0].data_.empty())
-        return "Error! Audio container is empty.";
+    std::vector<float> Qs(S);
+    if (filterType == Butterworth) {
+        if (S == 1) {
+            Qs[0] = Q;
+        }
+        else {
 
-    if (targetFreq < 20.0f || targetFreq > 20000.0f) return "Target frequency should be between 20Hz and 20000Hz.";
+        }
+    }
+    else if (filterType == LinkwitzRiley) {
+        if (steepness % 24 != 0) return "Error! Linkwitz-riley requires steepness to be 24 db/oct or 48 db/oct.";
 
-    if (steepness % 12 != 0 || steepness > 48)
-        return "Invalid steepness value. Available: 12, 24, 36, 48.";
+        for (auto& q : Qs)
+            q = 1 / std::sqrt(2.0f);
+    }
 
-    if (Q < 0.0f || Q > 1.0f)
-        return "Invalid Q value. Available range is [0, 1].";
 
     return std::nullopt;
 }

@@ -7,6 +7,11 @@
 std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& container) {
     if (container.numChannels_ != 2) return "Audio container is already in mono.";
 
+    // Step 1: Measure correlation between channels
+    // Step 2: Split at 120Hz and hard sum the sub bass
+    // Step 3: Sum the highs and multiply it by a gain factor which is dependent on ro
+    // Step 4: Final mono = MonoSub + MonoHighs
+
     const float windowTimeDur = 0.020f; // 20 ms
     const size_t windowSize = container.sampleRate_ * windowTimeDur;
 
