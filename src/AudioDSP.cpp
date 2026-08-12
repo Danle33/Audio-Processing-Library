@@ -4,56 +4,93 @@
 #include <cmath>
 #include <cmath>
 
+#include "../include/lib/dsp/AudioEQ.hpp"
+
 std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& container) {
-    if (container.numChannels_ != 2) return "Audio container is already in mono.";
+    if (container.numChannels_ != 2 || container.channels_.size() < 2) {
+        return "Audio container must be stereo (2 channels).";
+    }
 
     // Step 1: Measure correlation between channels
     // Step 2: Split at 120Hz and hard sum the sub bass
     // Step 3: Sum the highs and multiply it by a gain factor which is dependent on ro
     // Step 4: Final mono = MonoSub + MonoHighs
 
-    const float windowTimeDur = 0.020f; // 20 ms
-    const size_t windowSize = container.sampleRate_ * windowTimeDur;
+    const size_t totalFrames = container.channels_[0].data_.size();
+    if (totalFrames == 0) {
+        return "Audio container is empty.";
+    }
 
-    float roPrev = 0.0f;
-    const float alphaSmooth = 0.99;
+    core::AudioContainer lowBand = container;
+    core::AudioContainer highBand = container;
 
-    for (size_t i = 0; i < container.channels_[0].data_.size(); i += windowSize) {
+    eq::highCut(lowBand, 120.0f, 24, 1.0f, eq::FilterType::LinkwitzRiley);
+    eq::lowCut(highBand, 120.0f, 24, 1.0f, eq::FilterType::LinkwitzRiley);
 
-        // 1. Calculate correlation coefficient between left and right signal
-        const auto samplesLeft = container.channels_[0].data_.data() + i;
-        const auto samplesRight = container.channels_[0].data_.data() + i;
+    const size_t windowSize = static_cast<size_t>(container.sampleRate_ * 0.020f); // 20 ms
+    float roPrev = 1.0f;
+    const float alphaSmooth = 0.99f;
 
-        float ro = calcCorrelationCoefficient(samplesLeft, samplesRight, windowSize);
+    for (size_t blockStart = 0; blockStart < totalFrames; blockStart += windowSize) {
+        // Handle partial block at the end of the file
+        const size_t currentBlockSize = std::min(windowSize, totalFrames - blockStart);
 
-        // Temporal smoothing (preventing clicking noise) with a high cut filter
-        if (i > 0) {
-            ro = alphaSmooth * roPrev + (1 - alphaSmooth) * ro;
+        const float* samplesLeft = container.channels_[0].data_.data() + blockStart;
+        const float* samplesRight = container.channels_[1].data_.data() + blockStart;
+
+        float ro = calcCorrelationCoefficient(samplesLeft, samplesRight, currentBlockSize);
+
+        // Temporal smoothing
+        if (blockStart > 0) {
+            ro = alphaSmooth * roPrev + (1.0f - alphaSmooth) * ro;
         }
-
         roPrev = ro;
 
-        // 2. Apply Linkwitz-Riley filter
+        // Safeguard against out-of-phase sqrt(0) / division by zero
+        const float safeRo = std::max(0.0f, ro);
+        const float gain = 1.0f / std::sqrt(2.0f + 2.0f * safeRo);
+
+        for (size_t k = 0; k < currentBlockSize; ++k) {
+            const size_t idx = blockStart + k;
+
+            const float monoSub = 0.5f * (lowBand.channels_[0].data_[idx] + lowBand.channels_[1].data_[idx]);
+
+            const float monoHigh = gain * (highBand.channels_[0].data_[idx] + highBand.channels_[1].data_[idx]);
+
+            container.channels_[0].data_[idx] = monoSub + monoHigh;
+        }
     }
+
+    // 3. Convert container to mono structure
+    container.numChannels_ = 1;
+    container.channels_.resize(1);
 
     return std::nullopt;
 }
 
 float lib::dsp::calcCorrelationCoefficient(const float* samplesLeft, const float* samplesRight, const size_t frameCount) {
-    float dotProduct = 0.0f, energyLeft = 0.0f, energyRight = 0.0f;
+    if (frameCount == 0) return 1.0f;
 
-    for (size_t i = 0; i < frameCount; i++) {
-        dotProduct += samplesLeft[i] * samplesRight[i];
-        energyLeft += samplesLeft[i] * samplesRight[i];
-        energyRight += samplesRight[i] * samplesLeft[i];
+    double dotProduct = 0.0;
+    double energyLeft = 0.0;
+    double energyRight = 0.0;
+
+    for (size_t i = 0; i < frameCount; ++i) {
+        const auto l = static_cast<double>(samplesLeft[i]);
+        const auto r = static_cast<double>(samplesRight[i]);
+
+        dotProduct  += l * r;
+        energyLeft  += l * l;
+        energyRight += r * r;
     }
 
-    // if both channels are silent, return strong correlation
-    if (energyLeft * energyRight < 1e-7) {
+    // Silence guard
+    const double energyProduct = energyLeft * energyRight;
+    if (energyProduct < 1e-9) {
         return 1.0f;
     }
 
-    const float ro = dotProduct / std::sqrt(energyLeft * energyRight);
-    return std::clamp(ro, -1.0f, 1.0f);
+    const double ro = dotProduct / std::sqrt(energyProduct);
+    return std::clamp(static_cast<float>(ro), -1.0f, 1.0f);
 }
 
