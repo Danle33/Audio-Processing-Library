@@ -13,6 +13,10 @@ namespace lib::core {
         std::vector<AudioChannel> channels_;
         uint32_t sampleRate_;
 
+        [[nodiscard]] bool isEmpty() const {
+            return channels_.empty() || channels_[0].data_.empty();
+        }
+
     };
 
 }

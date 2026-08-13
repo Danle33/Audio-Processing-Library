@@ -94,3 +94,35 @@ float lib::dsp::calcCorrelationCoefficient(const float* samplesLeft, const float
     return std::clamp(static_cast<float>(ro), -1.0f, 1.0f);
 }
 
+std::optional<std::string> lib::dsp::trim(lib::core::AudioContainer& container, const double offset, const double duration) {
+    if (container.isEmpty()) return "Error! Audio container is empty.";
+    if (offset < 0 || duration < 0) return "Error! Offset and duration should be non negative values.";
+
+    const auto sampleCount = container.channels_[0].data_.size();
+    const auto bufferDuration = static_cast<double>(sampleCount) / container.sampleRate_;
+
+    if (offset >= bufferDuration) return "Offset exceeds buffer length.";
+
+    core::AudioContainer trimmedContainer;
+    trimmedContainer.sampleRate_ = container.sampleRate_;
+    trimmedContainer.numChannels_ = container.numChannels_;
+    trimmedContainer.channels_.resize(container.numChannels_);
+
+    auto start = static_cast<size_t>(offset * container.sampleRate_);
+    auto end = static_cast<size_t>((offset + duration) * container.sampleRate_);
+    end = std::min(end, static_cast<size_t>(bufferDuration * container.sampleRate_));
+
+    trimmedContainer.channels_[0].resize(static_cast<size_t>(end - start + 1));
+    trimmedContainer.channels_[1].resize(static_cast<size_t>(end - start + 1));
+
+    for (size_t i = 0; i < end - start + 1; i++) {
+        trimmedContainer.channels_[0].data_[i] = container.channels_[0].data_[i + start];
+        trimmedContainer.channels_[1].data_[i] = container.channels_[1].data_[i + start];
+    }
+
+    container.channels_.clear();
+    container = trimmedContainer;
+
+    return std::nullopt;
+}
+

@@ -201,7 +201,7 @@ std::optional<std::string> lib::io::wav::populateChannels(const std::vector<uint
 std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, lib::core::AudioContainer& container,
                             const encodingFormat& encodingFormat) {
 
-    if (container.channels_.empty() || container.channels_[0].data_.empty()) {
+    if (container.isEmpty()) {
         return "Audio container contains no channel or frame data.";
     }
 

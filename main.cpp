@@ -15,8 +15,9 @@ int main() {
         return 0;
     }
 
-    // DSP processing...
-    lib::dsp::stereoToMono(myContainer);
+    // DSP calls...
+    lib::dsp::trim(myContainer, 50, 100);
+    lib::dsp::eq::bell(myContainer, 3000, 5, 1);
 
     if (const auto status = lib::io::write("Assets/RiffProcessed.wav", myContainer,
                     lib::io::wav::encodingFormat {

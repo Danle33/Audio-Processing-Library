@@ -7,8 +7,8 @@
 
 namespace lib::dsp::eq {
     enum FilterType {
-        Butterworth, // default, for user requested cuts
-        LinkwitzRiley // used for crossovering, flat response
+        Butterworth, // Default, for user requested cuts
+        LinkwitzRiley // Used for crossovering, flat response
     };
 
     struct BiquadCoeffs {
@@ -26,5 +26,10 @@ namespace lib::dsp::eq {
 
     std::optional<std::string> highCut(core::AudioContainer& audioContainer, float cutoffFreq, uint8_t steepness, float Q,
                                     FilterType filterType = Butterworth);
+
+    std::optional<std::string> bell(core::AudioContainer& audioContainer,
+                                float targetFreq,
+                                double db,
+                                float Q);
 
 }
