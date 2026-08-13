@@ -6,6 +6,7 @@
 
 namespace lib::core {
 
+    // Wrapper around an array of normalized audio samples
     class AudioChannel {
     public:
         std::vector<float> data_;

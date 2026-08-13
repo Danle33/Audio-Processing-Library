@@ -10,7 +10,7 @@ namespace lib::core {
     class AudioContainer {
     public:
         size_t numChannels_;
-        std::vector<AudioChannel> channels_;
+        std::vector<AudioChannel> channels_; // 1 or 2 channels
         uint32_t sampleRate_;
 
         [[nodiscard]] bool isEmpty() const {

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cmath>
+#include <complex>
 
 #include "../include/lib/dsp/AudioEQ.hpp"
 
@@ -13,7 +14,7 @@ std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& con
 
     // Step 1: Measure correlation between channels
     // Step 2: Split at 120Hz and hard sum the sub bass
-    // Step 3: Sum the highs and multiply it by a gain factor which is dependent on ro
+    // Step 3: Sum the highs and multiply them by a gain factor which is dependent on ro
     // Step 4: Final mono = MonoSub + MonoHighs
 
     const size_t totalFrames = container.channels_[0].data_.size();
@@ -27,7 +28,7 @@ std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& con
     eq::highCut(lowBand, 120.0f, 24, 1.0f, eq::FilterType::LinkwitzRiley);
     eq::lowCut(highBand, 120.0f, 24, 1.0f, eq::FilterType::LinkwitzRiley);
 
-    const size_t windowSize = static_cast<size_t>(container.sampleRate_ * 0.020f); // 20 ms
+    const size_t windowSize = static_cast<size_t>(container.sampleRate_ * 0.020f); // 20 ms window
     float roPrev = 1.0f;
     const float alphaSmooth = 0.99f;
 
@@ -46,7 +47,7 @@ std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& con
         }
         roPrev = ro;
 
-        // Safeguard against out-of-phase sqrt(0) / division by zero
+        // Safeguard against out of phase sqrt(0) / division by zero
         const float safeRo = std::max(0.0f, ro);
         const float gain = 1.0f / std::sqrt(2.0f + 2.0f * safeRo);
 
@@ -54,14 +55,13 @@ std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& con
             const size_t idx = blockStart + k;
 
             const float monoSub = 0.5f * (lowBand.channels_[0].data_[idx] + lowBand.channels_[1].data_[idx]);
-
             const float monoHigh = gain * (highBand.channels_[0].data_[idx] + highBand.channels_[1].data_[idx]);
 
             container.channels_[0].data_[idx] = monoSub + monoHigh;
         }
     }
 
-    // 3. Convert container to mono structure
+    // Convert container to a mono structure
     container.numChannels_ = 1;
     container.channels_.resize(1);
 
@@ -125,4 +125,51 @@ std::optional<std::string> lib::dsp::trim(lib::core::AudioContainer& container, 
 
     return std::nullopt;
 }
+
+std::optional<std::string> lib::dsp::volumeGain(lib::core::AudioContainer& container, const double gain) {
+    if (container.isEmpty()) return "Error! Audio container is empty.";
+    if (gain < 0) return "Gain factor should be a positive value.";
+
+    for (size_t ch = 0; ch < container.numChannels_; ++ch) {
+        for (size_t i = 0; i < container.channels_[ch].size(); ++i) {
+            container.channels_[ch].data_[i] *= gain;
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<std::string> lib::dsp::volumeDecibels(lib::core::AudioContainer& container, const double dB) {
+    return volumeGain(container, std::pow(10, dB / 20));
+}
+
+std::optional<std::string> lib::dsp::measurePeak(const lib::core::AudioContainer& container, double* peak) {
+    if (!peak) {
+        return "Error! Null pointer provided for peak output.";
+    }
+
+    if (container.isEmpty()) {
+        return "Error! Audio container is empty.";
+    }
+
+    float maxLinearPeak = 0.0f;
+
+    for (size_t ch = 0; ch < container.numChannels_; ++ch) {
+        const auto& channelData = container.channels_[ch].data_;
+        const size_t frameCount = channelData.size();
+
+        for (size_t i = 0; i < frameCount; ++i) {
+            maxLinearPeak = std::max(maxLinearPeak, std::abs(channelData[i]));
+        }
+    }
+
+    // Noise floor clamp
+    const double safePeak = std::max(static_cast<double>(maxLinearPeak), 1e-6);
+
+    *peak = 20.0 * std::log10(safePeak);
+
+    return std::nullopt;
+}
+
+
 

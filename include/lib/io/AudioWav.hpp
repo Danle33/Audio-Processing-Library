@@ -20,6 +20,7 @@ namespace lib::io::wav {
     };
 #pragma pack(pop)
 
+    // Decodes buffer data into a container
     std::optional<std::string> decode(const std::vector<uint8_t>& buffer, lib::core::AudioContainer& container);
     std::optional<std::string> populateChannels(const std::vector<uint8_t>& buffer, const FmtPayload& fmtPayload, uint32_t dataPayloadCursor,
                                             uint32_t dataPayloadSize,
@@ -34,6 +35,7 @@ namespace lib::io::wav {
     };
 #pragma pack(pop)
 
+    // Encodes container data into a buffer, with requested encoding variables
     std::optional<std::string> encode(std::vector<uint8_t>& buffer, lib::core::AudioContainer& container,
             const encodingFormat& encodingFormat);
 }

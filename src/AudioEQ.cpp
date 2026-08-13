@@ -10,7 +10,7 @@ std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioConta
                                   const uint8_t steepness,
                                   float Q,
                                   const FilterType filterType) {
-    // 1. Validation
+    // Validation
     if (audioContainer.isEmpty()) {
         return "Error! Audio container is empty.";
     }
@@ -79,7 +79,7 @@ std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioConta
         };
     }
 
-    // Allocate per-channel, per-stage memory registers (Direct form II transposed)
+    // Allocate per-channel, per-stage memory registers (direct form II transposed)
     const size_t numChannels = audioContainer.channels_.size();
     const size_t frameCount = audioContainer.channels_[0].data_.size();
     std::vector<std::vector<StageState>> states(numChannels, std::vector<StageState>(S));
@@ -99,7 +99,7 @@ std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioConta
                 st.z1 = c.b1 * x - c.a1 * y + st.z2;
                 st.z2 = c.b2 * x - c.a2 * y;
 
-                // Flush denormals to avoid CPU microcode stalls
+                // Flush denormals to avoid CPU stalls
                 if (std::abs(st.z1) < 1e-15f) st.z1 = 0.0f;
                 if (std::abs(st.z2) < 1e-15f) st.z2 = 0.0f;
 
@@ -118,7 +118,7 @@ std::optional<std::string> lib::dsp::eq::highCut(core::AudioContainer& audioCont
                                    const uint8_t steepness,
                                    float Q,
                                    const FilterType filterType) {
-    // 1. Validation
+    // Validation
     if (audioContainer.isEmpty()) {
         return "Error! Audio container is empty.";
     }
@@ -225,7 +225,7 @@ std::optional<std::string> lib::dsp::eq::bell(core::AudioContainer& audioContain
                                 const float targetFreq,
                                 const double db,
                                 float Q) {
-    // 1. Validation
+    // Validation
     if (audioContainer.isEmpty()) {
         return "Error! Audio container is empty.";
     }

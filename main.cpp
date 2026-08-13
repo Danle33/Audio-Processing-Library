@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "include/lib/core/AudioContainer.hpp"
+#include "include/lib/dsp/AudioCompressor.hpp"
 #include "include/lib/dsp/AudioDSP.hpp"
 #include "include/lib/dsp/AudioEQ.hpp"
 #include "include/lib/io/AudioIO.hpp"
@@ -16,14 +17,24 @@ int main() {
     }
 
     // DSP calls...
-    lib::dsp::trim(myContainer, 50, 100);
-    lib::dsp::eq::bell(myContainer, 3000, 5, 1);
+    lib::dsp::trim(myContainer, 0, 40);
+    lib::dsp::volumeDecibels(myContainer, 1.0);
+
+    double peak;
+    lib::dsp::measurePeak(myContainer, &peak);
+    std::cout << peak << '\n';
+
+    double gainReduction;
+    lib::dsp::compressor::compress(myContainer, -50, 4, 1, 100, 1, &gainReduction);
+    std::cout << gainReduction << '\n';
+
+    lib::dsp::volumeDecibels(myContainer, gainReduction);
 
     if (const auto status = lib::io::write("Assets/RiffProcessed.wav", myContainer,
                     lib::io::wav::encodingFormat {
                         .sampleRateHz = 44100,
                         .bitDepth = 16,
-                        .numChannels = 1
+                        .numChannels = 2
                     })) {
         std::cout << *status << '\n';
         return 0;
