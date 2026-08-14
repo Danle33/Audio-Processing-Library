@@ -47,7 +47,7 @@ std::optional<std::string> lib::audioGenerator::joinSineWaves(core::AudioContain
     leftChannel.resize(frameCount);
 
     for (auto& container : containers) {
-        if (container.channels_.empty()) return "Error! Some container from a vector is empty.";
+        if (container.channels_.empty()) return "Error! Vector contains and empty container.";
         if (container.channels_[0].data_.size() != frameCount) return "Error! Input container data size mismatch.";
 
         for (size_t j = 0; j < frameCount; ++j) {

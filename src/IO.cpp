@@ -2,12 +2,18 @@
 #include "../include/lib/io/Wav.hpp"
 
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 
 #include "../include/lib/dsp/GeneralDSP.hpp"
 
 
 std::optional<std::string> lib::io::read(const std::string& path, lib::core::AudioContainer& container) {
+    const std::filesystem::path systemPath(path);
+    auto ext = systemPath.extension().string();
+
+    if (ext != ".wav") return "Unsupported file extension.";
+
     std::ifstream file(path, std::ios::binary | std::ios::ate);
 
     if (!file.is_open()) {
@@ -24,16 +30,27 @@ std::optional<std::string> lib::io::read(const std::string& path, lib::core::Aud
     }
 
     file.close();
-    return wav::decode(buffer, container);
+    if (ext == ".wav")
+        return wav::decode(buffer, container);
+    return std::nullopt;
 }
 
 std::optional<std::string> lib::io::write(const std::string& path, lib::core::AudioContainer& container,
                                         const lib::io::wav::encodingFormat& encodingFormat) {
+
+    const std::filesystem::path systemPath(path);
+    auto ext = systemPath.extension().string();
+
+    if (ext != ".wav") return "Unsupported file extension.";
+
     std::vector<uint8_t> buffer;
-    auto status = wav::encode(buffer, container, encodingFormat);
-    if (status.has_value()) {
-        return status.value();
+    if (ext == ".wav") {
+        auto status = wav::encode(buffer, container, encodingFormat);
+        if (status.has_value()) {
+            return status.value();
+        }
     }
+
 
     std::ofstream file(path, std::ios::binary);
 
