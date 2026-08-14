@@ -6,15 +6,13 @@
 #include "include/lib/dsp/Compressor.hpp"
 #include "include/lib/dsp/GeneralDSP.hpp"
 #include "include/lib/dsp/EQ.hpp"
+#include "include/lib/dsp/Resampler.hpp"
 #include "include/lib/io/IO.hpp"
 #include "include/lib/generator/Generator.hpp"
 
 int main() {
     lib::core::AudioContainer myContainer;
     lib::io::read("Assets/Riff.wav", myContainer);
-
-    lib::dsp::Equalizer eq;
-    eq.highCut(myContainer, 3000, 24, 1);
 
 
 

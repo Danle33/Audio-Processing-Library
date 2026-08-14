@@ -5,6 +5,7 @@
 
 #include "../include/lib/io/IO.hpp"
 #include "../include/lib/dsp/GeneralDSP.hpp"
+#include "../include/lib/dsp/Resampler.hpp"
 
 std::optional<std::string> lib::io::wav::decode(const std::vector<uint8_t>& buffer, lib::core::AudioContainer& container) {
     if (buffer.size() < 12) return "Error! File size is less than 12 bytes.";
@@ -207,8 +208,8 @@ std::optional<std::string> lib::io::wav::encode(std::vector<uint8_t>& buffer, li
 
     // validation
     if (encodingFormat.sampleRateHz != container.sampleRate_) {
-        // TODO: resample(newSampleRate, container);
-        return "Requested sample rate must be the same as input one.";
+        dsp::Resampler resampler;
+        resampler.process(container, encodingFormat.sampleRateHz, dsp::InterpolationType::Sinc);
     }
     if (encodingFormat.bitDepth != 8 && encodingFormat.bitDepth != 16 && encodingFormat.bitDepth != 24 && encodingFormat.bitDepth != 32)
         return "Invalid bit depth. Available: 8, 16, 24, 32.";

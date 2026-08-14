@@ -18,4 +18,6 @@ add_executable(AudioLib main.cpp
         src/Compressor.cpp
         include/lib/generator/Generator.hpp
         src/Generator.cpp
-        include/lib/core/Constants.hpp)
+        include/lib/core/Constants.hpp
+        include/lib/dsp/Resampler.hpp
+        src/Resampler.cpp)
