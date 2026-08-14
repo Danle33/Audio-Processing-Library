@@ -1,25 +1,36 @@
-# Digital Audio/Signal Processing Library
+# Digital Audio & Signal Processing Library
 
-Built from scratch without external libraries, this library allows users to manipulate audio files via code.
-Project focuses on deep low-level understanding of how audio gets decoded, processed and encoded at the end, with user-friendly APIs.
+A lightweight, zero-dependency C++17 audio processing library built from scratch. 
 
-All DSP API methods are placed inside include/lib/dsp subdirectory. 
-Users can perform general-type processing via methods from lib::dsp namespace.
-More specialized processors extend the lib::dsp namespace and are placed in the same subdirectory.
+This project focuses on a low-level understanding of audio decoding, digital signal processing (DSP), and encoding under the hood—exposing these capabilities through a clean, intuitive C++ API.
 
-Currently supported processors are:  
-**Equalizer** which performs **filtering** (low-cut / high/cut) as well as **bell curved** type boosting and cutting.  
-**Compressor** that can act as a limiter with ratio set to 100.  
-**Resampler** which downsamples or upsamples with three different interpolation algorithms: **linear** (simple, low quality), **cubic** (average quality) and **sinc** (highest quality).  
-Other general DSP options are **volume/gain changing**, **converting from stereo to mono**, **audio trimming** etc.. Others can be found in include/lib/GeneralDSP.hpp in namespace lib::dsp.
+---
 
-It is also possible to generate simple sound waves (currently only pure sine wave) at a given frequency, with custom amplitude and phase. All generator-related calls can be found in include/lib/generator/Generator.hpp in namespace lib::generator.
+## Features
 
-I/O methods are located in include/lib/io.
-Project only supports .wav files for now.
+### Signal Processing (`lib::dsp`)
+* **Equalizer:** Low-cut, high-cut, and bell-curve boosting/cutting filters.
+* **Compressor:** Dynamic range compression with adjustable thresholds, attack/release, and ratios (acts as a limiter when ratio is set to 100:1).
+* **Resampler:** Upsampling and downsampling with three interpolation algorithms:
+  * `Linear` – Low complexity, fast.
+  * `Cubic` – Balanced performance and quality.
+  * `Sinc` – High-fidelity signal reconstruction.
+* **General DSP (`GeneralDSP.hpp`):** Gain/volume adjustments, stereo-to-mono downmixing, audio trimming, and buffer operations.
 
-## Building
+### Signal Generation (`lib::generator`)
+* Synthesizes audio waveforms (e.g., pure sine waves) with custom frequency, amplitude, and initial phase parameters.
 
-Requirement: C++17
+### Audio I/O (`lib::io`)
+* Parsing and encoding support for **WAV** files (`.wav`).
 
-// TODO
+---
+
+## Directory Structure
+
+```text
+include/
+└── lib/
+    ├── core/          # Core audio containers and data types
+    ├── dsp/           # Processors (Equalizer, Compressor, Resampler)
+    ├── generator/     # Signal synthesis engine
+    └── io/            # Audio file decoders and encoders (WAV)
