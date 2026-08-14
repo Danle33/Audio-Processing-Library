@@ -17,6 +17,15 @@ namespace lib::core {
             return channels_.empty() || channels_[0].data_.empty();
         }
 
+        void clear() {
+            if (!isEmpty()) {
+                channels_[0].data_.clear();
+                if (numChannels_ != 1)
+                    channels_[1].data_.clear();
+                channels_.clear();
+            }
+        }
+
     };
 
 }

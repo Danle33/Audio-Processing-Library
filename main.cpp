@@ -12,18 +12,27 @@
 #include "include/lib/generator/Generator.hpp"
 
 int main() {
+
+    lib::core::AudioContainer hz440;
+    lib::core::AudioContainer hz480;
+
+    lib::audioGenerator::generateSineWave(hz440, 440, 0.5, 0, 3, 44100);
+    lib::audioGenerator::generateSineWave(hz480, 480, 0.5, 0, 3, 44100);
+
     lib::core::AudioContainer myContainer;
-    lib::io::read("Assets/Riff.wav", myContainer);
+    auto vec = std::vector<lib::core::AudioContainer>{hz440, hz480};
+    lib::audioGenerator::joinSineWaves(myContainer, vec);
 
-    lib::dsp::PitchShifter pitchShifter;
-    if (auto status = pitchShifter.process(myContainer, 4, -1))
-        std::cout << *status << std::endl;
+    double peak;
+    lib::dsp::measurePeak(myContainer, &peak);
+    std::cout << peak << std::endl;
 
-    if (const auto status = lib::io::write("Assets/RiffProcessed.wav", myContainer,
+
+    if (const auto status = lib::io::write("Assets/joined.wav", myContainer,
                     lib::io::wav::encodingFormat {
                         .sampleRateHz = 44100,
                         .bitDepth = 16,
-                        .numChannels = 2
+                        .numChannels = 1
                     })) {
         std::cout << *status << '\n';
         return 0;

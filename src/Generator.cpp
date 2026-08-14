@@ -7,12 +7,7 @@
 std::optional<std::string> lib::audioGenerator::generateSineWave(lib::core::AudioContainer& container, const double frequency,
                                                                  const double amplitude, const double phase,
                                                                  const double lengthSeconds, const uint32_t sampleRate) {
-    if (!container.isEmpty()) {
-        container.channels_[0].data_.clear();
-        if (container.numChannels_ != 1)
-            container.channels_[1].data_.clear();
-        container.channels_.clear();
-    }
+    container.clear();
 
     if (frequency <= 0.0 || frequency > 20000.0) return "Frequency should be positive and less than or equal to 20000Hz";
     if (amplitude <= 0 || amplitude > 1) return "Amplitude range should be: (0, 1]";
@@ -36,3 +31,30 @@ std::optional<std::string> lib::audioGenerator::generateSineWave(lib::core::Audi
 
     return std::nullopt;
 }
+
+std::optional<std::string> lib::audioGenerator::joinSineWaves(core::AudioContainer& outputContainer, std::vector<lib::core::AudioContainer>& containers) {
+    outputContainer.clear();
+
+    if (containers.empty()) return std::nullopt;
+
+    outputContainer.numChannels_ = 1;
+    outputContainer.sampleRate_ = containers[0].sampleRate_;
+    outputContainer.channels_.resize(1);
+
+    const auto frameCount = containers[0].channels_[0].data_.size();
+
+    auto& leftChannel = outputContainer.channels_[0].data_;
+    leftChannel.resize(frameCount);
+
+    for (auto& container : containers) {
+        if (container.channels_.empty()) return "Error! Some container from a vector is empty.";
+        if (container.channels_[0].data_.size() != frameCount) return "Error! Input container data size mismatch.";
+
+        for (size_t j = 0; j < frameCount; ++j) {
+            leftChannel[j] += container.channels_[0].data_[j];
+        }
+    }
+
+    return std::nullopt;
+}
+
