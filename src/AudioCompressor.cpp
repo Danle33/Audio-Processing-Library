@@ -40,7 +40,7 @@ std::optional<std::string> lib::dsp::compressor::compress(lib::core::AudioContai
     }
 
     if (lookahead < 0.0 || lookahead > 10.0) {
-        return "Invalid lookahead time. Expected range is [0.0, 10.0] ms.";
+        return "Invalid lookahead time. Expected range is [0, 10] ms.";
     }
 
     // 2. Precompute Coefficients

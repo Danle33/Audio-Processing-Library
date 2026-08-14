@@ -7,34 +7,23 @@
 #include "include/lib/dsp/AudioDSP.hpp"
 #include "include/lib/dsp/AudioEQ.hpp"
 #include "include/lib/io/AudioIO.hpp"
+#include "include/lib/signalGeneration/AudioGenerator.hpp"
 
 int main() {
     lib::core::AudioContainer myContainer;
 
-    if (const auto status = lib::io::read("Assets/Riff.wav", myContainer)) {
-        std::cout << *status << '\n';
-        return 0;
-    }
-
     // DSP calls...
-    lib::dsp::trim(myContainer, 0, 40);
-    lib::dsp::volumeDecibels(myContainer, 1.0);
+    lib::audioGenerator::generateSineWave(myContainer, 440, 1, 0, 3, 48000);
 
     double peak;
     lib::dsp::measurePeak(myContainer, &peak);
-    std::cout << peak << '\n';
+    std::cout << peak << std::endl;
 
-    double gainReduction;
-    lib::dsp::compressor::compress(myContainer, -50, 4, 1, 100, 1, &gainReduction);
-    std::cout << gainReduction << '\n';
-
-    lib::dsp::volumeDecibels(myContainer, gainReduction);
-
-    if (const auto status = lib::io::write("Assets/RiffProcessed.wav", myContainer,
+    if (const auto status = lib::io::write("Assets/SineWave440Hz.wav", myContainer,
                     lib::io::wav::encodingFormat {
-                        .sampleRateHz = 44100,
+                        .sampleRateHz = 48000,
                         .bitDepth = 16,
-                        .numChannels = 2
+                        .numChannels = 1
                     })) {
         std::cout << *status << '\n';
         return 0;

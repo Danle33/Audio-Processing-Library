@@ -3,13 +3,13 @@
 #include <cmath>
 #include <complex>
 
-constexpr double pi = 3.14159265358979323846;
+#include "../include/lib/core/Constants.hpp"
 
 std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioContainer,
-                                  const float cutoffFreq,
-                                  const uint8_t steepness,
-                                  float Q,
-                                  const FilterType filterType) {
+                                                const float cutoffFreq,
+                                                const uint8_t steepness,
+                                                float Q,
+                                                const FilterType filterType) {
     // Validation
     if (audioContainer.isEmpty()) {
         return "Error! Audio container is empty.";
@@ -33,6 +33,7 @@ std::optional<std::string> lib::dsp::eq::lowCut(core::AudioContainer& audioConta
     }
 
     const uint8_t S = steepness / 12;
+    const double pi = core::constants::pi;
 
     // Compute Q values for each Biquad stage
     std::vector<float> Qs(S);
@@ -141,6 +142,7 @@ std::optional<std::string> lib::dsp::eq::highCut(core::AudioContainer& audioCont
     }
 
     const uint8_t S = steepness / 12;
+    const double pi = core::constants::pi;
 
     // Compute Q values for each biquad stage
     std::vector<float> Qs(S);
@@ -249,6 +251,8 @@ std::optional<std::string> lib::dsp::eq::bell(core::AudioContainer& audioContain
 
     // Scale Q factor (Q / sqrt(2))
     Q = Q / 1.4142135623730951f;
+
+    const double pi = core::constants::pi;
 
     const float w0 = 2.0f * pi * (targetFreq / fs);
     const float cos_w0 = std::cos(w0);

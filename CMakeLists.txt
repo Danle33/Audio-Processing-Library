@@ -15,4 +15,7 @@ add_executable(AudioLib main.cpp
         include/lib/dsp/AudioEQ.hpp
         src/AudioEQ.cpp
         include/lib/dsp/AudioCompressor.hpp
-        src/AudioCompressor.cpp)
+        src/AudioCompressor.cpp
+        include/lib/signalGeneration/AudioGenerator.hpp
+        src/AudioGenerator.cpp
+        include/lib/core/Constants.hpp)
