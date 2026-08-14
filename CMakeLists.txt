@@ -20,4 +20,6 @@ add_executable(AudioLib main.cpp
         src/Generator.cpp
         include/lib/core/Constants.hpp
         include/lib/dsp/Resampler.hpp
-        src/Resampler.cpp)
+        src/Resampler.cpp
+        include/lib/dsp/PitchShifter.hpp
+        src/PitchShifter.cpp)

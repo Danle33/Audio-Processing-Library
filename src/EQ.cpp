@@ -99,7 +99,8 @@ std::optional<std::string> Equalizer::lowCut(core::AudioContainer& audioContaine
                 Qs[k] = 1.0f / (2.0f * std::cos((2.0f * static_cast<float>(k) + 1.0f) * pi / (4.0f * static_cast<float>(S))));
             }
         }
-    } else if (filterType == FilterType::LinkwitzRiley) {
+    }
+    else if (filterType == FilterType::LinkwitzRiley) {
         if (steepness % 24 != 0) {
             return "Error! Linkwitz-Riley requires steepness to be 24 dB/oct or 48 dB/oct.";
         }
@@ -155,7 +156,8 @@ std::optional<std::string> Equalizer::highCut(core::AudioContainer& audioContain
                 Qs[k] = 1.0f / (2.0f * std::cos((2.0f * static_cast<float>(k) + 1.0f) * pi / (4.0f * static_cast<float>(S))));
             }
         }
-    } else if (filterType == FilterType::LinkwitzRiley) {
+    }
+    else if (filterType == FilterType::LinkwitzRiley) {
         if (steepness % 24 != 0) {
             return "Error! Linkwitz-Riley requires steepness to be 24 dB/oct or 48 dB/oct.";
         }

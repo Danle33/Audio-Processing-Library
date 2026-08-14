@@ -6,6 +6,7 @@
 #include "include/lib/dsp/Compressor.hpp"
 #include "include/lib/dsp/GeneralDSP.hpp"
 #include "include/lib/dsp/EQ.hpp"
+#include "include/lib/dsp/PitchShifter.hpp"
 #include "include/lib/dsp/Resampler.hpp"
 #include "include/lib/io/IO.hpp"
 #include "include/lib/generator/Generator.hpp"
@@ -14,7 +15,9 @@ int main() {
     lib::core::AudioContainer myContainer;
     lib::io::read("Assets/Riff.wav", myContainer);
 
-
+    lib::dsp::PitchShifter pitchShifter;
+    if (auto status = pitchShifter.process(myContainer, 4, -1))
+        std::cout << *status << std::endl;
 
     if (const auto status = lib::io::write("Assets/RiffProcessed.wav", myContainer,
                     lib::io::wav::encodingFormat {

@@ -24,6 +24,8 @@ namespace lib::dsp {
                                            uint32_t targetSampleRate,
                                            InterpolationType type = InterpolationType::Cubic);
 
+        friend class PitchShifter;
+
     private:
         static float interpolateLinear(const std::vector<float>& buffer, double samplePos);
         static float interpolateCubic(const std::vector<float>& buffer, double samplePos);
