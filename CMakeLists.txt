@@ -6,16 +6,16 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(AudioLib main.cpp
         include/lib/core/AudioChannel.hpp
         include/lib/core/AudioContainer.hpp
-        include/lib/io/AudioIO.hpp
-        src/AudioIO.cpp
-        include/lib/dsp/AudioDSP.hpp
-        src/AudioWav.cpp
-        src/AudioDSP.cpp
-        include/lib/io/AudioWAV.hpp
-        include/lib/dsp/AudioEQ.hpp
-        src/AudioEQ.cpp
-        include/lib/dsp/AudioCompressor.hpp
-        src/AudioCompressor.cpp
-        include/lib/signalGeneration/AudioGenerator.hpp
-        src/AudioGenerator.cpp
+        include/lib/io/IO.hpp
+        src/IO.cpp
+        include/lib/dsp/GeneralDSP.hpp
+        src/Wav.cpp
+        src/GeneralDSP.cpp
+        include/lib/io/Wav.hpp
+        include/lib/dsp/EQ.hpp
+        src/EQ.cpp
+        include/lib/dsp/Compressor.hpp
+        src/Compressor.cpp
+        include/lib/generator/Generator.hpp
+        src/Generator.cpp
         include/lib/core/Constants.hpp)
