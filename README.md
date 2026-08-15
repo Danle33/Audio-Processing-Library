@@ -18,7 +18,7 @@ This project focuses on a low-level understanding of audio decoding, digital sig
 * **General DSP (`GeneralDSP.hpp`):** Gain/volume adjustments, stereo-to-mono downmixing, audio trimming, and peak measuring.
 
 ### Signal Generation (`lib::generator`)
-* Synthesizes audio waveforms (e.g., pure sine waves) with custom frequency, amplitude, and initial phase parameters.
+* Synthesizes audio waveforms (currently only pure sine waves) with custom frequency, amplitude, and initial phase parameters.
 
 ### Audio I/O (`lib::io`)
 * Parsing and encoding support for **WAV** files (`.wav`).
