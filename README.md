@@ -15,7 +15,7 @@ This project focuses on a low-level understanding of audio decoding, digital sig
   * `Linear` – Low complexity, fast.
   * `Cubic` – Balanced performance and quality.
   * `Sinc` – High-fidelity signal reconstruction.
-* **General DSP (`GeneralDSP.hpp`):** Gain/volume adjustments, stereo-to-mono downmixing, audio trimming, and peak measuring.
+* **General DSP (`GeneralDSP.hpp`):** Gain/volume adjustments, stereo-to-mono downmixing, audio trimming, signal joining, and peak measuring.
 
 ### Signal Generation (`lib::generator`)
 * Synthesizes audio waveforms (currently only pure sine waves) with custom frequency, amplitude, and initial phase parameters.
@@ -23,7 +23,7 @@ This project focuses on a low-level understanding of audio decoding, digital sig
 ### Audio I/O (`lib::io`)
 * Parsing and encoding support for **WAV** files (`.wav`).
 
-*A complete code example can be found in `main.cpp`.*
+*A complete code example can be found in `exampleUsage.cpp`.*
 
 ---
 
