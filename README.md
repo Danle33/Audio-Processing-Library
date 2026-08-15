@@ -6,7 +6,7 @@ This project focuses on a low-level understanding of audio decoding, digital sig
 
 ---
 
-## Features
+## Current Features
 
 ### Signal Processing (`lib::dsp`)
 * **Equalizer:** Low-cut, high-cut, and bell-curve boosting/cutting filters.
