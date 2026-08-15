@@ -22,4 +22,5 @@ add_executable(AudioLib main.cpp
         include/lib/dsp/Resampler.hpp
         src/Resampler.cpp
         include/lib/dsp/PitchShifter.hpp
-        src/PitchShifter.cpp)
+        src/PitchShifter.cpp
+        exampleUsage.cpp)

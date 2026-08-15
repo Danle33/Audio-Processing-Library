@@ -13,6 +13,4 @@ namespace lib::audioGenerator {
     std::optional<std::string> generateSineWave(lib::core::AudioContainer& container, double frequency, double amplitude,
                                                 double phase, double lengthSeconds, uint32_t sampleRate);
 
-    // Joins all containers into an output container
-    std::optional<std::string> joinSineWaves(core::AudioContainer& outputContainer, std::vector<lib::core::AudioContainer>& containers);
 }

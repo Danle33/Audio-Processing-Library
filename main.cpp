@@ -11,50 +11,21 @@
 #include "include/lib/io/IO.hpp"
 #include "include/lib/generator/Generator.hpp"
 
+extern void exampleUsage();
+
 int main() {
 
-    lib::core::AudioContainer myContainer;
+    lib::core::AudioContainer c1;
+    lib::io::read("Assets/riff.wav", c1);
 
-    if (const auto status = lib::io::read("Assets/riff.wav", myContainer)) {
-        std::cout << *status << '\n';
-        return 0;
-    }
+    lib::core::AudioContainer c2;
+    lib::audioGenerator::generateSineWave(c2, 440, 0.5, 180, 180, 48000);
 
-    lib::dsp::volumeDecibels(myContainer, -0.5);
+    lib::core::AudioContainer c3;
+    std::vector v = {c1, c2};
+    lib::dsp::joinSignals(c3, v);
 
-    double peakBefore;
-    lib::dsp::measurePeak(myContainer, &peakBefore);
-    std::cout << "Peak before compression: " << peakBefore << '\n';
-
-    double gainReduction;
-    lib::dsp::Compressor compressor(-20, 4, 1, 50, 1);
-    compressor.process(myContainer, &gainReduction);
-    std::cout << "Gain reduction: " << gainReduction << '\n';
-
-    double peakAfter;
-    lib::dsp::measurePeak(myContainer, &peakAfter);
-    std::cout << "Peak after compression: " << peakAfter << '\n';
-
-    lib::dsp::volumeDecibels(myContainer, peakBefore - peakAfter); // Makeup gain
-
-    double peak;
-    lib::dsp::measurePeak(myContainer, &peak);
-    std::cout << "Peak after makeup gain: " << peak << '\n';
-
-    lib::dsp::Equalizer eq;
-    eq.highCut(myContainer, 8000, 24, 1);
-
-    lib::dsp::stereoToMono(myContainer);
-
-    if (const auto status = lib::io::write("Assets/riffProcessed.wav", myContainer,
-                    lib::io::wav::encodingFormat {
-                        .sampleRateHz = 44100,
-                        .bitDepth = 16,
-                        .numChannels = 1
-                    })) {
-        std::cout << *status << '\n';
-        return 0;
-    }
+    lib::io::write("Assets/joined.wav", c3, lib::io::wav::encodingFormat {44100, 16, 2});
 
     return 0;
 }

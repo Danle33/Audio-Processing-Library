@@ -24,4 +24,8 @@ namespace lib::dsp {
 
     // Measures a global peak in dB and returns it via peak argument
     std::optional<std::string> measurePeak(const lib::core::AudioContainer& container, double* peak);
+
+    // Joins all containers into an output container
+    // Method tries to be as general as possible, resampling all sample rates to match value from the first container of the list
+    std::optional<std::string> joinSignals(core::AudioContainer& outputContainer, std::vector<lib::core::AudioContainer>& containers);
 }

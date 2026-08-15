@@ -6,6 +6,7 @@
 #include <complex>
 
 #include "../include/lib/dsp/EQ.hpp"
+#include "../include/lib/dsp/Resampler.hpp"
 
 std::optional<std::string> lib::dsp::stereoToMono(lib::core::AudioContainer& container) {
     if (container.numChannels_ != 2 || container.channels_.size() < 2) {
@@ -172,5 +173,66 @@ std::optional<std::string> lib::dsp::measurePeak(const lib::core::AudioContainer
     return std::nullopt;
 }
 
+std::optional<std::string> lib::dsp::joinSignals(core::AudioContainer& outputContainer,
+                                                 std::vector<lib::core::AudioContainer>& containers) {
+    outputContainer.clear();
 
+    if (containers.empty()) return std::nullopt;
+
+    Resampler resampler;
+    const uint32_t targetSampleRate = containers[0].sampleRate_;
+
+    size_t maxFrames = 0;
+    size_t maxChannels = 1;
+
+    for (auto& container : containers) {
+        if (container.channels_.empty()) {
+            return "Error! Vector contains an empty container.";
+        }
+
+        if (container.sampleRate_ != targetSampleRate) {
+            resampler.process(container, targetSampleRate, InterpolationType::Sinc);
+        }
+
+        maxFrames = std::max(maxFrames, container.channels_[0].data_.size());
+        maxChannels = std::max(maxChannels, container.numChannels_);
+    }
+
+    outputContainer.sampleRate_ = targetSampleRate;
+    outputContainer.numChannels_ = maxChannels;
+    outputContainer.channels_.resize(maxChannels);
+
+    for (size_t ch = 0; ch < maxChannels; ++ch) {
+        outputContainer.channels_[ch].data_.assign(maxFrames, 0.0f);
+    }
+
+    // Mix all containers into output container
+    for (const auto& container : containers) {
+        const size_t containerFrames = container.channels_[0].data_.size();
+
+        if (container.numChannels_ == 1) {
+            // Mono input: add to all output channels (centers mono audio)
+            for (size_t ch = 0; ch < maxChannels; ++ch) {
+                auto& outData = outputContainer.channels_[ch].data_;
+                const auto& inData = container.channels_[0].data_;
+
+                for (size_t i = 0; i < containerFrames; ++i) {
+                    outData[i] += inData[i];
+                }
+            }
+        }
+        else if (container.numChannels_ == 2) {
+            for (size_t ch = 0; ch < 2; ++ch) {
+                auto& outData = outputContainer.channels_[ch].data_;
+                const auto& inData = container.channels_[ch].data_;
+
+                for (size_t i = 0; i < containerFrames; ++i) {
+                    outData[i] += inData[i];
+                }
+            }
+        }
+    }
+
+    return std::nullopt;
+}
 

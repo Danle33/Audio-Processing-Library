@@ -32,29 +32,3 @@ std::optional<std::string> lib::audioGenerator::generateSineWave(lib::core::Audi
     return std::nullopt;
 }
 
-std::optional<std::string> lib::audioGenerator::joinSineWaves(core::AudioContainer& outputContainer, std::vector<lib::core::AudioContainer>& containers) {
-    outputContainer.clear();
-
-    if (containers.empty()) return std::nullopt;
-
-    outputContainer.numChannels_ = 1;
-    outputContainer.sampleRate_ = containers[0].sampleRate_;
-    outputContainer.channels_.resize(1);
-
-    const auto frameCount = containers[0].channels_[0].data_.size();
-
-    auto& leftChannel = outputContainer.channels_[0].data_;
-    leftChannel.resize(frameCount);
-
-    for (auto& container : containers) {
-        if (container.channels_.empty()) return "Error! Vector contains and empty container.";
-        if (container.channels_[0].data_.size() != frameCount) return "Error! Input container data size mismatch.";
-
-        for (size_t j = 0; j < frameCount; ++j) {
-            leftChannel[j] += container.channels_[0].data_[j];
-        }
-    }
-
-    return std::nullopt;
-}
-
