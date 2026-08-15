@@ -1,6 +1,6 @@
 # Digital Audio & Signal Processing Library
 
-A lightweight, zero-dependency C++17 audio processing library built from scratch.
+A lightweight, zero-dependency C++17 library built from scratch.
 
 This project focuses on a low-level understanding of audio decoding, digital signal processing (DSP), and encoding under the hood—exposing these capabilities through a clean, intuitive C++ API.
 
