@@ -11,6 +11,7 @@ This project focuses on a low-level understanding of audio decoding, digital sig
 ### Signal Processing (`lib::dsp`)
 * **Equalizer:** Low-cut, high-cut, and bell-curve boosting/cutting filters.
 * **Compressor:** Dynamic range compression with adjustable thresholds, attack/release, lookahead time, and ratios (acts as a limiter when ratio is set to 100:1).
+* **Delay:** Raw signal echoing with adjustable delay time, feedback and mix knob. Can be also set to ping-pong (stereo bouncing) mode.
 * **Resampler:** Upsampling and downsampling with three interpolation algorithms:
   * `Linear` – Low complexity, fast.
   * `Cubic` – Balanced performance and quality.
