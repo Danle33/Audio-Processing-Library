@@ -4,6 +4,7 @@
 
 #include "include/lib/core/AudioContainer.hpp"
 #include "include/lib/dsp/Compressor.hpp"
+#include "include/lib/dsp/Delay.hpp"
 #include "include/lib/dsp/GeneralDSP.hpp"
 #include "include/lib/dsp/EQ.hpp"
 #include "include/lib/dsp/PitchShifter.hpp"
@@ -15,17 +16,16 @@ extern void exampleUsage();
 
 int main() {
 
-    lib::core::AudioContainer c1;
-    lib::io::read("Assets/riff.wav", c1);
+    lib::core::AudioContainer myContainer;
+    lib::io::read("Assets/riff.wav", myContainer);
 
-    lib::core::AudioContainer c2;
-    lib::audioGenerator::generateSineWave(c2, 440, 0.5, 180, 180, 48000);
+    lib::dsp::trim(myContainer, 0.4, 0.5);
+    lib::dsp::stereoToMono(myContainer);
 
-    lib::core::AudioContainer c3;
-    std::vector v = {c1, c2};
-    lib::dsp::joinSignals(c3, v);
+    lib::dsp::Delay delay;
+    delay.process(myContainer, 500, 0.5, 0.5, true);
 
-    lib::io::write("Assets/joined.wav", c3, lib::io::wav::encodingFormat {44100, 16, 2});
+    lib::io::write("Assets/riffProcessed.wav", myContainer, lib::io::wav::encodingFormat {myContainer.sampleRate_, 16, 2});
 
     return 0;
 }
